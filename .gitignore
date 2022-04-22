@@ -196,6 +196,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # DB
+build/**
 build/resources/main/application-aws.yaml
 src/main/resources/application-aws.yaml
 src/main/resources/application.yaml
