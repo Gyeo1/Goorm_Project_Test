@@ -206,4 +206,5 @@ src/main/java/com/example/nuvi_demo/personal/
 # Oauth
 application-oauth.yaml
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,intellij,java
-
+Backend_Auth_Service/.gradle
+Backend_Auth_Service/build
