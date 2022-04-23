@@ -35,6 +35,9 @@ dependencies {
 	//JSON Parsing
 	dependencies { implementation 'com.google.code.gson:gson:2.8.7' }
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	//Redis 설정
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 tasks.named('test') {

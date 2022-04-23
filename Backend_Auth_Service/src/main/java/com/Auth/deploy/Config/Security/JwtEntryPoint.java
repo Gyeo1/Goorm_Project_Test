@@ -9,11 +9,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+
+
+//Exception 처리를 위한 엔트리 포인트이다.
 @Component
 @Slf4j
-public class JwtEntryPoint implements AuthenticationEntryPoint { //Exception 처리를 위한 엔트리 포인트이다.
+public class JwtEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-        log.error("Unauthorized error: {}", authException.getMessage());
+        log.error("Error! Unauthorized error: {}", authException.getMessage());
+        log.info(request.toString());
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Error: Unauthorized"); //SC_UNAUTHORIZED는 401에러이다.
     }
 }
