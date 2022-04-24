@@ -17,6 +17,7 @@ import io.swagger.annotations.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -73,22 +74,8 @@ public class SignController {
                 RefreshToken.createRefreshToken(
                         userVo.getId(),
                         refresh_token,
-                        60 * 60 * 24 * 1000L)
-
-//                .refreshToken(refresh_token)
-//                .id(userVo.getId())
-//                .expiration(60 * 60 * 24 * 1000L)
-//                .build());
+                        60 * 1000L) //1분임
         );
-
-//      //Auth 정보 저장을 위해 토큰 값과 userID를 가져와 builder해준다.
-//        authRepo.save(Auth.builder().Refresh_token(refresh_token)
-//                .idx(Base64.getEncoder().encodeToString((userVo.getId()+access_token).getBytes(StandardCharsets.UTF_8)))
-//                .Access_token(access_token)
-//                .user_id(userVo.getId())
-//                .timestamp(Timestamp.valueOf(LocalDateTime.now()))
-//                .build());
-//        authRepo.getById("Refresh_token");
         //jwt에 Access 토큰과 refresh 토큰을 넣고 Tostring으로 보내준다.
         return responseService.getSingleResult(jwt.toString());
 //        return responseService.getSingleResult(jwtTokenProvider.createToken(String.valueOf(user_check.getUser_id()), user_check.getRoles()));
@@ -120,19 +107,44 @@ public class SignController {
         log.info(key);//
         return responseService.getSuccessResult(); //잘 들어오기만 하면 된다. 왜냐면 이미 들어오는거 자체가 Filter를 거치기 때문.
     }
-    @ApiOperation(value = "Access토큰 인증")
-    @PostMapping(value = "/refresh")
-    public CommonResult refreshProcess(@RequestBody String key){
-        String userid = jwtTokenProvider.informationToken(key).toString(); //refresh 토큰에 있는 유저 정보를 가져옴
-        log.info("유저 ? : "+ userid);
-        log.info(refreshTokenRedisRepository.findById(userid).toString());
-        if (refreshTokenRedisRepository.findById(userid).toString().equals("Optional.empty"))
-        {
-            log.info("Refresh 토큰이 만료되었다");
-        }
-        else{log.info("Refresh 확인 Access_Token 재 발급");}
 
-        return responseService.getSuccessResult(); //잘 들어오기만 하면 된다. 왜냐면 이미 들어오는거 자체가 Filter를 거치기 때문.
+
+    @ApiOperation(value = "Refresh Token 인증")
+    @PostMapping(value = "/refresh")
+    public CommonResult  refreshProcess(@RequestBody String key){
+        String userid = jwtTokenProvider.informationToken(key).toString(); //refresh 토큰에 있는 유저 정보를 가져옴
+        User userCheck = userJpaRepo.findById(userid).orElseThrow(CEmailSigninFailedException::new); //유저가 있는지 확인
+        log.info("유저 ? : "+ userid);
+
+
+        if (refreshTokenRedisRepository.findById(userid).toString().equals("Optional.empty")) //empty면 Redis에 User관련 토큰이 x
+        {
+            log.info("Refresh 토큰이 만료되었습니다. Refrsh/Access를 재발급 합니다.");
+
+            //토큰 2개 재생성
+            ArrayList<String> jwt =new ArrayList<String>();
+            String refresh_token = jwtTokenProvider.createRefreshToken(String.valueOf(userCheck.getUser_id()));
+            String access_token= jwtTokenProvider.createToken(String.valueOf(userCheck.getUser_id()), userCheck.getRoles());
+
+            jwt.add(refresh_token);
+            jwt.add(access_token);
+
+            //Redis에 Refresh token 저장.
+            refreshTokenRedisRepository.save(
+                    RefreshToken.createRefreshToken(
+                            userid,
+                            refresh_token,
+                            60 * 1000L) //1분임
+            );
+            return responseService.getSingleResult(jwt.toString());
+        }
+        else{
+            String access_token= jwtTokenProvider.createToken(String.valueOf(userCheck.getUser_id()), userCheck.getRoles());
+            log.info("Refresh 확인 Access_Token 재 발급");
+            return responseService.getSingleResult(access_token);
+        }
+
+
     }
 
     @ApiOperation(value = "로그아웃", notes = "회원을 삭제한다.")
