@@ -44,6 +44,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
             "/auth/login",
             "/auth/singup",
             "/auth/refresh",
+//            "/auth/validate"
     };
 
     @Bean
@@ -61,22 +62,31 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override //여기가 Spring 시큐리티 설정의 핵심
     protected void configure(HttpSecurity http) throws Exception {
         http
-                .httpBasic().disable() // rest api 이므로 기본설정 사용안함. 기본설정은 비인증시 로그인폼 화면으로 리다이렉트 된다.
                 .csrf().disable() // rest api이므로 csrf 보안이 필요없으므로 disable처리.
-                .logout().disable()// jwt로 로그인 로그아웃 할꺼니깐 disable
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS) // jwt token으로 인증할것이므로 세션필요없으므로 생성안함.
+
+                //예외 처리 핸들링
+                .exceptionHandling()
+                .authenticationEntryPoint(jwtEntryPoint)
+
+                //세션을 사용하지 않기 위한 설정
                 .and()
-                .cors().and() //and로 구분짓기.
+                .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // jwt token으로 인증할것이므로 세션필요없으므로 생성안함.
+
+
+                .and() //and로 구분짓기.
                 .authorizeRequests() // 아래의 리퀘스트에 대한 사용권한 체크,
                 .antMatchers(AUTH_LIST).permitAll()  // AUTH_LIST에 해당되는 접근은 모두 허가해 준다.
-                .antMatchers(HttpMethod.GET, "/exception/**","/helloworld/**", "/actuator/health").permitAll() // 등록된 GET요청 리소스는 누구나 접근가능
                 .anyRequest().hasRole("USER") // 그외 나머지 요청은 모두 인증된 회원만 접근 가능
+
+                //JWT 인증 필터 설정
                 .and()
-                .exceptionHandling().authenticationEntryPoint(jwtEntryPoint);
+                .apply(new JwtSecurityConfig(jwtTokenProvider));
+
         // 예외 handliing을 jwyEntryPoint에서 처리 인증/인가에서 발생되는 예외는 Access_Token의 기간 만료다.
 
 
-        http.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+//        http.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
         // jwt token 필터를 id/password 인증 필터 전에 넣으라는 의미이다. 즉 제일 먼저 필터링을 처리함
 
     }

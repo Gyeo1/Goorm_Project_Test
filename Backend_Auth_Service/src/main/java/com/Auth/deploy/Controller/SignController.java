@@ -101,19 +101,24 @@ public class SignController {
     }
 
     //Access 토큰이 잘 오기만 하면 된다.
-    @ApiOperation(value = "Access토큰 인증")
-    @PostMapping(value = "/validate")
-    public CommonResult checkToken(@RequestBody String key){
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "X-AUTH-TOKEN", value = "로그인 성공 후 access_token을 넣으세요", required = true, dataType = "String", paramType = "header")
+    })
+    @ApiOperation(value = "Token 유효 검사", notes = "Validaiton!")
+    @GetMapping(value = "/validate")
+    public CommonResult checkToken(String key){
         log.info(key);//
+
         return responseService.getSuccessResult(); //잘 들어오기만 하면 된다. 왜냐면 이미 들어오는거 자체가 Filter를 거치기 때문.
     }
 
 
+
     @ApiOperation(value = "Refresh Token 인증")
     @PostMapping(value = "/refresh")
-    public CommonResult  refreshProcess(@RequestBody String key){
+    public CommonResult  refreshProcess(String key){
         String userid = jwtTokenProvider.informationToken(key).toString(); //refresh 토큰에 있는 유저 정보를 가져옴
-        User userCheck = userJpaRepo.findById(userid).orElseThrow(CEmailSigninFailedException::new); //유저가 있는지 확인
+        User userCheck = userJpaRepo.findById(userid).orElseThrow(CEmailSigninFailedException::new); //해당 토큰의 유저가 DB에 있는지
         log.info("유저 ? : "+ userid);
 
 
@@ -134,7 +139,7 @@ public class SignController {
                     RefreshToken.createRefreshToken(
                             userid,
                             refresh_token,
-                            60 * 1000L) //1분임
+                            60 * 3* 1000L) //1분임
             );
             return responseService.getSingleResult(jwt.toString());
         }
@@ -146,7 +151,6 @@ public class SignController {
 
 
     }
-
     @ApiOperation(value = "로그아웃", notes = "회원을 삭제한다.")
     @PostMapping("/logout")
     public SingleResult<String> logout(@RequestBody String key) {
@@ -157,5 +161,17 @@ public class SignController {
         return responseService.getSingleResult("LogOut이 완료되었습니다");
     }
 
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "X-AUTH-TOKEN", value = "로그인 성공 후 access_token", required = true, dataType = "String", paramType = "header")
+    })
+    @ApiOperation(value = "회원 삭제", notes = "회원번호(user_id)로 회원정보를 삭제한다")
+    @DeleteMapping(value = "/user/{user_id}")
+    public CommonResult delete(
+            @ApiParam(value = "회원번호", required = true) @PathVariable String user_id) {
+        userJpaRepo.deleteById(user_id);
+
+        // 성공 결과 정보만 필요한경우 getSuccessResult()를 이용하여 결과를 출력한다.
+        return responseService.getSuccessResult();
+    }
 
 }
